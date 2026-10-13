@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивті Биология Шоу | Декада Ашылуы</title>
+    <!-- Canvas Confetti Library for animations -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #00f2fe;
+            --secondary-color: #4facfe;
+            --accent-color: #ff0844;
+            --success-color: #00e676;
+            --warning-color: #ff9100;
+            --dark-card: rgba(20, 24, 40, 0.88);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+        }
+
+        /* Живой анимированный фон с биологическим рисунком */
+        body {
+            background: 
+                linear-gradient(rgba(10, 15, 30, 0.75), rgba(15, 25, 45, 0.85)),
+                url('dna-bg.jpg') center/cover no-repeat fixed;
+            background-size: cover;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Canvas для живой DNA-анимации */
+        #dnaCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.55;
+        }
+
+        /* Анимированные фоновые сферы (клетки) */
+        .bg-spheres {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .sphere {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            opacity: 0.35;
+            animation: float 12s infinite ease-in-out alternate;
+        }
+
+        .s1 { width: 280px; height: 280px; background: radial-gradient(circle, #ff0844, transparent); top: 5%; left: 5%; }
+        .s2 { width: 320px; height: 320px; background: radial-gradient(circle, #00f2fe, transparent); bottom: 5%; right: 5%; animation-delay: -4s; }
+        .s3 { width: 220px; height: 220px; background: radial-gradient(circle, #7f00ff, transparent); top: 40%; left: 45%; animation-delay: -2s; }
+        .s4 { width: 180px; height: 180px; background: radial-gradient(circle, #00e676, transparent); top: 70%; left: 20%; animation-delay: -7s; }
+        .s5 { width: 200px; height: 200px; background: radial-gradient(circle, #ff9100, transparent); top: 15%; right: 25%; animation-delay: -3s; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            50% { transform: translate(40px, -30px) scale(1.1) rotate(90deg); }
+            100% { transform: translate(-20px, 40px) scale(0.95) rotate(180deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            background: var(--dark-card);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            width: 100%;
+            max-width: 700px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.55), 0 0 40px rgba(0, 242, 254, 0.08);
+            padding: 30px;
+            color: white;
+        }
+
+        /* Верхняя панель: Очки, Таймер, Комбо + Музыка */
+        .top-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.05);
+            padding: 12px 20px;
+            border-radius: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stat-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .score-val { color: #00f2fe; font-size: 1.3rem; }
+        .timer-val { color: #ff9100; font-size: 1.3rem; }
+        .combo-badge {
+            background: linear-gradient(45deg, #ff0844, #ffb199);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: none;
+            animation: pulse 0.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* Кнопка музыки */
+        .music-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #ccc;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s;
+        }
+        .music-btn:hover {
+            background: rgba(0, 242, 254, 0.25);
+            color: #00f2fe;
+            border-color: #00f2fe;
+        }
+        .music-btn.playing {
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            color: #000;
+            border: none;
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+        }
+
+        /* Прогресс бар */
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            transition: width 0.4s ease;
+        }
+
+        /* Вопрос */
+        .question-title {
+            font-size: 1.35rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+            min-height: 60px;
+        }
+
+        /* Варианты ответов */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 550px) {
+            .options-grid { grid-template-columns: 1fr; }
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: rgba(0, 242, 254, 0.2);
+            border-color: #00f2fe;
+            transform: translateY(-2px);
+        }
+
+        .option-btn.correct {
+            background: rgba(0, 230, 118, 0.3) !important;
+            border-color: #00e676 !important;
+            color: #00e676;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+        }
+
+        .option-btn.incorrect {
+            background: rgba(255, 8, 68, 0.3) !important;
+            border-color: #ff0844 !important;
+            color: #ff0844;
+        }
+
+        /* Раздел интерактивных подсказок и кнопок */
+        .action-tools {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ccc;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .tool-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .reveal-btn {
+            background: linear-gradient(45deg, #ff9100, #f1c40f);
+            color: #111;
+            font-weight: bold;
+            border: none;
+        }
+
+        .reveal-btn:hover:not(:disabled) {
+            box-shadow: 0 0 12px rgba(255, 145, 0, 0.6);
+        }
+
+        .next-btn {
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: none;
+            margin-left: auto;
+            font-size: 1rem;
+        }
+
+        /* Экран результатов */
+        .result-box {
+            text-align: center;
+            display: none;
+            padding: 20px 0;
+        }
+
+        .result-box h2 { font-size: 2.2rem; margin-bottom: 10px; color: #00f2fe; }
+        .result-box p { font-size: 1.2rem; margin-bottom: 20px; color: #ccc; white-space: pre-line; }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #00e676, #1de9b6);
+            color: black;
+            font-weight: bold;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        /* Музыкальный плеер (скрытый) */
+        #bgMusic {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas для живой DNA-анимации -->
+    <canvas id="dnaCanvas"></canvas>
+
+    <!-- Красивые задние фоновые элементы (клетки) -->
+    <div class="bg-spheres">
+        <div class="sphere s1"></div>
+        <div class="sphere s2"></div>
+        <div class="sphere s3"></div>
+        <div class="sphere s4"></div>
+        <div class="sphere s5"></div>
+    </div>
+
+    <div class="container">
+        <!-- Экран Викторины -->
+        <div id="quizBox">
+            <div class="top-stats">
+                <div class="stat-box">🏆 Ұпай: <span class="score-val" id="score">0</span></div>
+                <div class="combo-badge" id="comboBadge">Combo x2 🔥</div>
+                <div class="stat-box">⏳ Уақыт: <span class="timer-val" id="timer">15</span>с</div>
+                <button class="music-btn" id="musicBtn" title="Музыканы қосу/өшіру" onclick="toggleMusic()">🎵</button>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div class="question-title" id="questionText">Сұрақ жүктелуде...</div>
+
+            <div class="options-grid" id="optionsGrid"></div>
+
+            <div class="action-tools">
+                <button class="tool-btn" id="fiftyFiftyBtn" onclick="useFiftyFifty()">💡 50/50 Көмек</button>
+                <button class="tool-btn reveal-btn" id="revealBtn" onclick="revealAnswer()">👁️ Жауапты көрсету</button>
+                <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Келесі сұрақ ➔</button>
+            </div>
+        </div>
+
+        <!-- Экран Результатов -->
+        <div class="result-box" id="resultBox">
+            <h2>Өте тамаша! 🎉</h2>
+            <p id="resultText">Сіз викторинаны аяқтадыңыз.</p>
+            <button class="restart-btn" onclick="restartQuiz()">Қайта бастау 🔄</button>
+        </div>
+    </div>
+
+    <!-- Фоновая музыка (мягкий ambient). Браузеры требуют клика для автозапуска. -->
+    <audio id="bgMusic" loop preload="auto">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" type="audio/mpeg">
+        <!-- Резервный источник (можно заменить на свой файл science-ambient.mp3) -->
+    </audio>
+
+    <script>
+        const quizData = [
+            { question: "Адамның тыныс алу мүшесі қалай аталады?", options: ["Жүрек", "Өкпе", "Бүйрек", "Бауыр"], correct: 1 },
+            { question: "Өсімдіктер қандай газды сіңіреді?", options: ["Оттегі", "Азот", "Көмірқышқыл газы", "Сутегі"], correct: 2 },
+            { question: "Адамның жүрегі қандай қызмет атқарады?", options: ["Қанды айдайды", "Ас қорытады", "Ақпаратты өңдейді", "Тыныс алады"], correct: 0 },
+            { question: "Қанның қызыл түсін беретін зат қалай аталады?", options: ["Хлорофилл", "Плазма", "Гемоглобин", "Лейкоцит"], correct: 2 },
+            { question: "Өсімдіктің жер астындағы мүшесі қалай аталады?", options: ["Сабақ", "Жапырақ", "Гүл", "Тамыр"], correct: 3 },
+            { question: "Адам ағзасындағы ең үлкен мүше қандай?", options: ["Бауыр", "Тері", "Өкпе", "Жүрек"], correct: 1 },
+            { question: "Жасушаның басқару орталығы қайсы?", options: ["Ядро", "Цитоплазма", "Мембрана", "Вакуоль"], correct: 0 },
+            { question: "Адам неше өкпемен тыныс алады?", options: ["Бір өкпемен", "Үш өкпемен", "Екі өкпемен", "Төрт өкпемен"], correct: 2 },
+            { question: "Қанды ағзаға айдайтын мүше қайсы?", options: ["Ми", "Жүрек", "Асқазан", "Өкпе"], correct: 1 },
+            { question: "Өсімдіктердің жасыл түсін беретін пигмент қалай аталады?", options: ["Хлорофилл", "Каротин", "Гемоглобин", "Меланин"], correct: 0 },
+            { question: "Адамның есту мүшесі қандай?", options: ["Көз", "Мұрын", "Құлақ", "Тері"], correct: 2 },
+            { question: "Сүйектер мен бұлшықеттер қандай қызмет атқарады?", options: ["Тек ас қорытады", "Тірек және қозғалысты қамтамасыз етеді", "Қан түзеді", "Энергия сақтайды"], correct: 1 },
+            { question: "Ауру қоздыратын өте ұсақ тіршілік иелерінің бірі қалай аталады?", options: ["Бактерия", "Өсімдік", "Жәндік", "Саңырауқұлақ"], correct: 0 },
+            { question: "Өсімдіктердің көбеюіне қатысатын мүшелердің бірі қандай?", options: ["Тамыр", "Сабақ", "Гүл", "Қабық"], correct: 2 },
+            { question: "Адамның қанын сүзетін мүше қайсы?", options: ["Бүйрек", "Өкпе", "Жүрек", "Тап"], correct: 0 }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let combo = 0;
+        let timer;
+        let timeLeft = 15;
+        let answered = false;
+        let musicPlaying = false;
+
+        const POINTS_PER_QUESTION = 200;
+
+        const questionText = document.getElementById("questionText");
+        const optionsGrid = document.getElementById("optionsGrid");
+        const scoreEl = document.getElementById("score");
+        const timerEl = document.getElementById("timer");
+        const progressBar = document.getElementById("progressBar");
+        const nextBtn = document.getElementById("nextBtn");
+        const revealBtn = document.getElementById("revealBtn");
+        const fiftyFiftyBtn = document.getElementById("fiftyFiftyBtn");
+        const comboBadge = document.getElementById("comboBadge");
+        const quizBox = document.getElementById("quizBox");
+        const resultBox = document.getElementById("resultBox");
+        const resultText = document.getElementById("resultText");
+        const musicBtn = document.getElementById("musicBtn");
+        const bgMusic = document.getElementById("bgMusic");
+
+        // === Музыка ===
+        function toggleMusic() {
+            if (musicPlaying) {
+                bgMusic.pause();
+                musicBtn.classList.remove("playing");
+                musicBtn.innerHTML = "🎵";
+                musicPlaying = false;
+            } else {
+                bgMusic.volume = 0.35;
+                bgMusic.play().then(() => {
+                    musicBtn.classList.add("playing");
+                    musicBtn.innerHTML = "🔊";
+                    musicPlaying = true;
+                }).catch(e => {
+                    console.log("Автозапуск музыкасы блокталған. Батырманы қайта басыңыз.");
+                });
+            }
+        }
+
+        // === Живая DNA анимация на Canvas ===
+        const canvas = document.getElementById("dnaCanvas");
+        const ctx = canvas.getContext("2d");
+        let particles = [];
+        let angle = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        // Создаём частицы (основания ДНК + плавающие молекулы)
+        function initParticles() {
+            particles = [];
+            const count = Math.min(80, Math.floor(window.innerWidth / 15));
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 2.5 + 1,
+                    speedX: (Math.random() - 0.5) * 0.4,
+                    speedY: (Math.random() - 0.5) * 0.4,
+                    color: Math.random() > 0.5 ? "rgba(0, 242, 254, 0.7)" : "rgba(79, 172, 254, 0.6)",
+                    type: Math.random() > 0.7 ? "base" : "float"
+                });
+            }
+        }
+        initParticles();
+
+        function drawDNA() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Рисуем две спирали ДНК
+            const centerX = canvas.width / 2;
+            const amplitude = Math.min(120, canvas.width * 0.12);
+            const pairs = 28;
+            const verticalSpacing = canvas.height / (pairs + 2);
+
+            for (let i = 0; i < pairs; i++) {
+                const y = verticalSpacing * (i + 1);
+                const phase = angle + i * 0.35;
+
+                const x1 = centerX + Math.sin(phase) * amplitude;
+                const x2 = centerX + Math.sin(phase + Math.PI) * amplitude;
+
+                // Соединяющие линии (водородные связи)
+                ctx.beginPath();
+                ctx.moveTo(x1, y);
+                ctx.lineTo(x2, y);
+                ctx.strokeStyle = `rgba(0, 230, 118, ${0.25 + 0.15 * Math.sin(phase)})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Узлы (основания)
+                ctx.beginPath();
+                ctx.arc(x1, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(0, 242, 254, 0.85)";
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(x2, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 8, 68, 0.75)";
+                ctx.fill();
+            }
+
+            // Плавающие частицы
+            particles.forEach(p => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+
+                if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            });
+
+            angle += 0.018;
+            requestAnimationFrame(drawDNA);
+        }
+        drawDNA();
+
+        // === Логика викторины ===
+        function loadQuestion() {
+            answered = false;
+            clearInterval(timer);
+            timeLeft = 15;
+            timerEl.innerText = timeLeft;
+            nextBtn.style.display = "none";
+            revealBtn.disabled = false;
+            fiftyFiftyBtn.disabled = false;
+
+            const currentQ = quizData[currentIndex];
+            questionText.innerText = `${currentIndex + 1}. ${currentQ.question}`;
+            progressBar.style.width = `${(currentIndex / quizData.length) * 100}%`;
+
+            optionsGrid.innerHTML = "";
+            currentQ.options.forEach((opt, idx) => {
+                const btn = document.createElement("button");
+                btn.className = "option-btn";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(idx, btn);
+                optionsGrid.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeOut();
+                }
+            }, 1000);
+        }
+
+        function timeOut() {
+            if (answered) return;
+            answered = true;
+            combo = 0;
+            updateComboUI();
+            
+            const currentQ = quizData[currentIndex];
+            optionsGrid.children[currentQ.correct].classList.add("correct");
+            disableAllButtons();
+            nextBtn.style.display = "block";
+        }
+
+        function checkAnswer(selectedIdx, btn) {
+            if (answered) return;
+            answered = true;
+            clearInterval(timer);
+
+            const currentQ = quizData[currentIndex];
+            if (selectedIdx === currentQ.correct) {
+                btn.classList.add("correct");
+                combo++;
+                let bonus = combo > 1 ? combo * 50 : 0;
+                score += POINTS_PER_QUESTION + bonus;
+                scoreEl.innerText = score;
+                
+                confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
+            } else {
+                btn.classList.add("incorrect");
+                optionsGrid.children[currentQ.correct].classList.add("correct");
+                combo = 0;
+            }
+
+            updateComboUI();
+            disableAllButtons();
+            nextBtn.style.display = "block";
+        }
+
+        function revealAnswer() {
+            if (answered) return;
+            const currentQ = quizData[currentIndex];
+            optionsGrid.children[currentQ.correct].classList.add("correct");
+            revealBtn.disabled = true;
+        }
+
+        function useFiftyFifty() {
+            if (answered) return;
+            const currentQ = quizData[currentIndex];
+            let removed = 0;
+            const buttons = Array.from(optionsGrid.children);
+
+            for (let i = 0; i < buttons.length; i++) {
+                if (i !== currentQ.correct && removed < 2) {
+                    buttons[i].style.visibility = "hidden";
+                    removed++;
+                }
+            }
+            fiftyFiftyBtn.disabled = true;
+        }
+
+        function updateComboUI() {
+            if (combo > 1) {
+                comboBadge.innerText = `Combo x${combo} 🔥`;
+                comboBadge.style.display = "inline-block";
+            } else {
+                comboBadge.style.display = "none";
+            }
+        }
+
+        function disableAllButtons() {
+            const btns = optionsGrid.children;
+            for (let btn of btns) {
+                btn.disabled = true;
+            }
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            quizBox.style.display = "none";
+            resultBox.style.display = "block";
+            const maxScore = quizData.length * POINTS_PER_QUESTION;
+            resultText.innerText = `Сіз барлық сұрақтарды аяқтадыңыз!\nЖалпы жинаған ұпайыңыз: ${score} / ${maxScore}`;
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+        }
+
+        function restartQuiz() {
+            currentIndex = 0;
+            score = 0;
+            combo = 0;
+            scoreEl.innerText = score;
+            updateComboUI();
+            quizBox.style.display = "block";
+            resultBox.style.display = "none";
+            loadQuestion();
+        }
+
+        // Іске қосу
+        loadQuestion();
+    </script>
+</body>
+</html>
